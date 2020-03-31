@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dot Matrix Lava Lamp</title>
+    <link rel="stylesheet" type="text/css" href="style.css" />
+  </head>
+  <body>
+    <div id="header"></div>
+    <div id="gui"></div>
+    <div id="footer"></div>
+    <script>
+      // Global objects
+      var config = null;
+      var websocket = null;
+
+      // Creates a label with content and optionally an id
+      function createLabel(text, key) {
+        return `<label ${key ? "id=" + key : ""}>${text}</label>`;
+      }
+      // Creates a slider with an id
+      function createSlider(val, key) {
+        return `<input type="range" min=${val.min} max=${val.max}
+                  value=${val.value} class="slider" step=${val.step}
+                  id=${key} oninput="update('${key}','l${key}')"/>`;
+      }
+
+      // Creates a switch with an id
+      function createSwitch(val, key) {
+        return `<label class="switch">
+                  <input id=${key} type="checkbox" ${val.value ? "checked" : ""}
+                  oninput="update('${key}', '${key}', ${key}.checked)"/>
+                  <span class="switch-slider"></span></label><br>`;
+      }
+
+      // Creates an input with an id
+      function createInput(val, key) {
+        return `<input type="text" id=${key}
+                  oninput="update('${key}', '${key}')"
+                  value=${val.value}><br>`;
+      }
+
+      // Create an element of specific type
+      function createType(val, key) {
+        let gui = "";
+        if (val.type == "slider") {
+          // create a label for the name of the property
+          gui += createLabel(val.name) + " ";
+          // create a label for the value with id = l+id
+          gui += createLabel(val.value, "l" + key) + "<br>";
+          // create the slider
+          gui += createSlider(val, key);
+        } else if (val.type == "checkbox") {
+          gui += createLabel(val.name) + " " + "<br>";
+          //gui += createLabel(val.value, "l" + key) + "<br>";
+          gui += createSwitch(val, key);
+        } else if (val.type == "text") {
+          gui += createLabel(val.name);
+          gui += createInput(val, key);
+        }
+        return gui;
+      }
+
+      // Create the selector at the top of the screen
+      function createHeader() {
+        let gui = "";
+        let keys = Object.keys(config);
+        let vals = Object.values(config);
+        gui += `<select id="selector" onchange=selectorChanged(value)>`;
+        for (let i = 0; i < keys.length; i++) {
+          gui += `<optgroup label="${vals[i].name}">`;
+          let subkeys = Object.keys(vals[i]);
+          let subvals = Object.values(vals[i]);
+          // skip name entry
+          for (let j = 1; j < subkeys.length; j++) {
+            let id = keys[i] + "." + subkeys[j];
+            gui += `<option value="${id}">${subvals[j].name}</option>`;
+          }
+        }
+        gui += `</select>`;
+        document.getElementById("header").innerHTML = gui;
+      }
+      // get the selector as name
+      function getSelectorItemName() {
+        return document.getElementById("selector").value;
+      }
+      // get the selector as object
+      function getSelectorItemObject() {
+        let keys = getSelectorItemName().split(".");
+        return config[keys[0]][keys[1]];
+      }
+
+      // Creates the specified user interface
+      function createGui() {
+        let gui = "";
+        let item = getSelectorItemObject();
+        let keys = Object.keys(item);
+        let vals = Object.values(item);
+        // skip name entry
+        for (let i = 1; i < keys.length; i++) {
+          gui += createType(vals[i], keys[i]);
+        }
+        document.getElementById("gui").innerHTML = gui;
+      }
+
+      // Creates the bottom user interface
+      function createFooter() {
+        let gui = `<input type="submit" value="Save" onclick="saveConfig()"/>`;
+        document.getElementById("footer").innerHTML = gui;
+      }
+
+      // Changeing the option selector creates a new gui
+      // But also new values need to be send through the
+      // WebSocket, to potentially change the animation
+      // if one is selected.
+      function selectorChanged(value) {
+        // update the userinterface
+        createGui();
+        // send command to webserver
+        executeCommand("activate", value);
+      }
+
+      // Update element id2 with value of id1 or value
+      function update(id1, id2, value) {
+        if (typeof value == "undefined")
+          value = document.getElementById(id1).value;
+        if (id1 != id2) {
+          document.getElementById(id2).innerHTML = value;
+        }
+        // also update the new value in the config
+        let item = getSelectorItemObject();
+        item[id1].value = value;
+        let key = getSelectorItemName();
+        executeCommand("update", `${key}.${id1}=${value}`);
+      }
+
+      // Save the settings on the webserver
+      function saveConfig() {
+        executeCommand("save", "");
+      }
+
+      // Call this to connect to the WebSocket server
+      function wsConnect() {
+        let protocol =
+          window.location.protocol === "https:" ? "wss://" : "ws://";
+        let location = window.location.host + ":1337";
+        websocket = new WebSocket(protocol + location);
+        websocket.onopen = function(evt) {
+          console.log("Opend: " + evt);
+        };
+        websocket.onclose = function(evt) {
+          console.log("Closed: " + evt);
+          // if websocket is closed immediately make a new connection
+          wsConnect();
+        };
+        websocket.onmessage = function(evt) {
+          console.log("Received: " + evt.data);
+        };
+        websocket.onerror = function(evt) {
+          console.log("Error: " + evt);
+        };
+      }
+
+      // WebSocket communications
+      function executeCommand(action, value) {
+        if (websocket.readyState == WebSocket.OPEN)
+          websocket.send(action + ":" + value);
+        console.log(action + ":" + value);
+      }
+
+      // Request the gui json file from the webserver and
+      // set the global config than generate the gui
+      // Generating the complete gui with code prevents
+      // controls misbehaving because all is there or nothing
+      function loadGui() {
+        let request = new XMLHttpRequest();
+        request.onload = function() {
+          config = request.response;
+          // first create the header selector
+          createHeader();
+          // gui is dependent on selector, create gui next
+          createGui();
+          // create the footer save button last
+          createFooter();
+        };
+        request.open("GET", "gui.json");
+        request.responseType = "json";
+        request.send();
+      }
+
+      // Async load JSon config and set callback for gui creation
+      loadGui();
+      // Connect websocket while gui is still being loading
+      wsConnect();
+    </script>
+  </body>
+</html>
