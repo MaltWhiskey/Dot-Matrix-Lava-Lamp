@@ -15,7 +15,11 @@
  * runtime parameters. Init only gets called when an animation starts or restarts
  * draw gets called every animation frame so choose wisely where to apply.
  *
- * TODO: make this available to change via web interface and save to persistent memory
+ * After creation of the config object, call load() to load the configuration from
+ * the "config.json" file and apply the values to the config struct.
+ *
+ * If no "config.json" exists the config structs keeps the values supplied in the struct
+ * after saveing a "config.json" is created.
  *-------------------------------------------------------------------------------------*/
 struct Config {
   struct {
@@ -24,8 +28,8 @@ struct Config {
   } display;
   struct {
     char ssid[32] = "-^..^-";
-    char password[64] = "qazwsxEDC1";
-    char hostname[64] = "mas";
+    char password[64] = "";
+    char hostname[64] = "";
   } network;
   struct {
     uint8_t brightness = 255;
@@ -274,8 +278,6 @@ struct Config {
       Serial.printf("Deserialization error: %s\n", err.c_str());
       return;
     }
-    serializeJson(doc, Serial);
-    Serial.println();
     /* ------------------------------ DISPLAY --------------------------------*/
     display.max_milliamps =
         doc["settings"]["display"]["max_milliamps"]["value"] | display.max_milliamps;
@@ -323,19 +325,22 @@ struct Config {
       Serial.printf("Deserialization error: %s\n", err.c_str());
       return;
     }
+    serializeJson(doc, Serial);
+    Serial.println();
+
+    // Handle the event send from the gui
     String event = doc["event"];
     if (event.equals("activate")) {
-      serializeJson(doc, Serial);
-      Serial.println();
       Animation::set(doc["target"]);
     } else if (event.equals("update")) {
       String buffer2;
+      // event propery is not needed any more, remove from document
       doc.remove("event");
+      // serialize again because deserializeJson destroys the buffer
       serializeJson(doc, buffer2);
+      // deserialize the new buffer to the config struct
       deserialize(buffer2);
     } else if (event.equals("save")) {
-      serializeJson(doc, Serial);
-      Serial.println();
       save();
     }
   }
