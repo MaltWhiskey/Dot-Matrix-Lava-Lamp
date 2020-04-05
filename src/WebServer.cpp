@@ -9,34 +9,51 @@
  *--------------------------------------------------------------------------------------------*/
 AsyncWebServer WebServer::server = AsyncWebServer(80);
 WebSocketsServer WebServer::webSocket = WebSocketsServer(1337);
+DNSServer WebServer::dnsServer;
+IPAddress WebServer::APIP = IPAddress(192, 168, 1, 1);
+boolean WebServer::AP_MODE = true;
 
 void WebServer::begin() {
   // Start file system
   if (!SPIFFS.begin()) {
     Serial.println("Error mounting SPIFFS");
   }
-
   // Start wifi
   Serial.print("Starting Wifi");
   WiFi.begin(config.network.ssid, config.network.password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(50);
+  for (uint8_t i = 0; i < 70; i++) {
+    if (WiFi.status() == WL_CONNECTED) {
+      AP_MODE = false;
+      break;
+    }
     Serial.print(".");
+    delay(100);
   }
-  Serial.println("");
-  Serial.print("Connected to ");
-  Serial.println(config.network.ssid);
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println();
 
-  // Start MDNS
-  if (MDNS.begin(config.network.hostname), WiFi.localIP()) {
-    Serial.print("MDNS responder started. Hostname = ");
-    Serial.println(config.network.hostname);
+  if (AP_MODE) {
+    Serial.println("Starting Wifi Access Point");
+    WiFi.mode(WIFI_AP);
+    // Quick hack to wait for SYSTEM_EVENT_AP_START
+    delay(100);
+    WiFi.softAPConfig(APIP, APIP, IPAddress(255, 255, 255, 0));
+    WiFi.softAP("MATRIX", "dot-matrix");
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+    dnsServer.start(53, "*", APIP);
+  } else {
+    Serial.print("Connected to ");
+    Serial.println(config.network.ssid);
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+    // Start MDNS
+    if (MDNS.begin(config.network.hostname), WiFi.localIP()) {
+      Serial.print("MDNS responder started. Hostname = ");
+      Serial.println(config.network.hostname);
+    }
+    // Add service to MDNS-SD
+    MDNS.addService("http", "tcp", 80);
   }
-  // Add service to MDNS-SD
-  MDNS.addService("http", "tcp", 80);
-
   // On HTTP request for root, provide index.html file
   server.on("*", HTTP_GET, onIndexRequest);
   // Start web server
@@ -50,9 +67,11 @@ void WebServer::begin() {
 void WebServer::update() {
   // Handle WebSocket data
   webSocket.loop();
+  // Handle dns requests in Access Point Mode only
+  if (AP_MODE) dnsServer.processNextRequest();
 }
 
-void WebServer::onIndexRequest(AsyncWebServerRequest *request) {
+void WebServer::onIndexRequest(AsyncWebServerRequest* request) {
   IPAddress remote_ip = request->client()->remoteIP();
   Serial.println("[" + remote_ip.toString() + "] HTTP GET request of " + request->url());
   if (request->url().equals("/"))
@@ -75,11 +94,13 @@ void WebServer::onIndexRequest(AsyncWebServerRequest *request) {
     } else {
       request->send(404, "text/plain", "Mime-Type Not Found");
     }
-  else
-    request->send(404, "text/plain", "Not Found");
+  else {
+    // request->send(404, "text/plain", "Not Found");
+    request->redirect("/index.html");
+  }
 }
 
-void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t *payload,
+void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
                                  size_t length) {
   switch (type) {
     // Client has disconnected

@@ -2,6 +2,8 @@
 #define COMM_H
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
+#include <DNSServer.h>
+#include <WiFi.h>
 /*----------------------------------------------------------------------------------------------
  * COMMUNICATION CLASS
  *--------------------------------------------------------------------------------------------*/
@@ -9,6 +11,9 @@ class WebServer {
  private:
   static AsyncWebServer server;
   static WebSocketsServer webSocket;
+  static DNSServer dnsServer;
+  static IPAddress APIP;
+  static boolean AP_MODE;
 
  public:
   static void begin();
