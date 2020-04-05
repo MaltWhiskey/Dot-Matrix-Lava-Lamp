@@ -18,6 +18,5 @@ class WebServer {
   static void onIndexRequest(AsyncWebServerRequest *request);
   static void onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t *payload,
                                size_t length);
-  static void executeCommand(uint8_t *payload);
 };
 #endif

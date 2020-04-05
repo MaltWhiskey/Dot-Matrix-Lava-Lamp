@@ -21,23 +21,24 @@
       // Creates a slider with an id
       function createSlider(val, key) {
         return `<input type="range" min=${val.min} max=${val.max}
-                  value=${val.value} class="slider" step=${val.step}
-                  id=${key} oninput="update('${key}','l${key}')"/>`;
+                   value=${val.value} class="slider" step=${val.step}
+                   id=${key} oninput="update('${key}', value, 'l${key}')"/>`;
       }
 
       // Creates a switch with an id
       function createSwitch(val, key) {
         return `<label class="switch">
-                  <input id=${key} type="checkbox" ${val.value ? "checked" : ""}
-                  oninput="update('${key}', '${key}', ${key}.checked)"/>
-                  <span class="switch-slider"></span></label><br>`;
+                   <input id=${key} type="checkbox"
+                   ${val.value ? "checked" : ""}
+                   oninput="update('${key}', ${key}.checked)"/>
+                   <span class="switch-slider"></span></label><br>`;
       }
 
       // Creates an input with an id
       function createInput(val, key) {
         return `<input type="text" id=${key}
-                  oninput="update('${key}', '${key}')"
-                  value=${val.value}><br>`;
+                   oninput="update('${key}', value)"
+                   value="${val.value}"><br>`;
       }
 
       // Create an element of specific type
@@ -64,6 +65,7 @@
       // Create the selector at the top of the screen
       function createHeader() {
         let gui = "";
+        let aidx = 0;
         let keys = Object.keys(config);
         let vals = Object.values(config);
         gui += `<select id="selector" onchange=selectorChanged(value)>`;
@@ -72,9 +74,11 @@
           let subkeys = Object.keys(vals[i]);
           let subvals = Object.values(vals[i]);
           // skip name entry
-          for (let j = 1; j < subkeys.length; j++) {
-            let id = keys[i] + "." + subkeys[j];
-            gui += `<option value="${id}">${subvals[j].name}</option>`;
+          for (let j = 0; j < subkeys.length; j++) {
+            if (typeof subvals[j] == "object") {
+              let id = keys[i] + "." + subkeys[j];
+              gui += `<option value="${id}">${subvals[j].name}</option>`;
+            }
           }
         }
         gui += `</select>`;
@@ -96,9 +100,10 @@
         let item = getSelectorItemObject();
         let keys = Object.keys(item);
         let vals = Object.values(item);
-        // skip name entry
-        for (let i = 1; i < keys.length; i++) {
-          gui += createType(vals[i], keys[i]);
+        for (let i = 0; i < keys.length; i++) {
+          if (typeof vals[i] == "object") {
+            gui += createType(vals[i], keys[i]);
+          }
         }
         document.getElementById("gui").innerHTML = gui;
       }
@@ -114,29 +119,39 @@
       // WebSocket, to potentially change the animation
       // if one is selected.
       function selectorChanged(value) {
-        // update the userinterface
+        // update the userinterface form selector change
         createGui();
-        // send command to webserver
-        executeCommand("activate", value);
+        // send command to webserver if animation is chosen
+        let item = getSelectorItemObject();
+        if (item.index >= 0) {
+          executeCommand({ event: "activate", target: item.index });
+        }
       }
 
-      // Update element id2 with value of id1 or value
-      function update(id1, id2, value) {
-        if (typeof value == "undefined")
-          value = document.getElementById(id1).value;
-        if (id1 != id2) {
-          document.getElementById(id2).innerHTML = value;
-        }
-        // also update the new value in the config
+      // Update config, label and execute update command
+      function update(id, value, lbl = "") {
+        // Update the new value in the config
         let item = getSelectorItemObject();
-        item[id1].value = value;
+        item[id].value = value;
+        // Set the label belonging to id
+        if (lbl != "") {
+          document.getElementById(lbl).innerHTML = value;
+        }
+        // Execute the update command on the webserver
         let key = getSelectorItemName();
-        executeCommand("update", `${key}.${id1}=${value}`);
+        // check the type specified in the json
+        if (item[id].type == "text") {
+          value = '"' + value + '"';
+        }
+        let keys = key.split(".");
+        let cmd = `{"event":"update","${keys[0]}":{"${keys[1]}":
+                   {"${id}":{"value":${value}}}}}`;
+        executeCommand(JSON.parse(cmd));
       }
 
       // Save the settings on the webserver
       function saveConfig() {
-        executeCommand("save", "");
+        executeCommand({ event: "save" });
       }
 
       // Call this to connect to the WebSocket server
@@ -145,27 +160,29 @@
           window.location.protocol === "https:" ? "wss://" : "ws://";
         let location = window.location.host + ":1337";
         websocket = new WebSocket(protocol + location);
-        websocket.onopen = function(evt) {
+        websocket.onopen = function (evt) {
           console.log("Opend: " + evt);
         };
-        websocket.onclose = function(evt) {
+        websocket.onclose = function (evt) {
           console.log("Closed: " + evt);
           // if websocket is closed immediately make a new connection
           wsConnect();
         };
-        websocket.onmessage = function(evt) {
+        websocket.onmessage = function (evt) {
           console.log("Received: " + evt.data);
         };
-        websocket.onerror = function(evt) {
+        websocket.onerror = function (evt) {
           console.log("Error: " + evt);
         };
       }
 
       // WebSocket communications
-      function executeCommand(action, value) {
-        if (websocket.readyState == WebSocket.OPEN)
-          websocket.send(action + ":" + value);
-        console.log(action + ":" + value);
+      function executeCommand(commandObj) {
+        let cmd = JSON.stringify(commandObj);
+        if (websocket.readyState == WebSocket.OPEN) {
+          websocket.send(cmd);
+        }
+        console.log(cmd);
       }
 
       // Request the gui json file from the webserver and
@@ -174,7 +191,7 @@
       // controls misbehaving because all is there or nothing
       function loadGui() {
         let request = new XMLHttpRequest();
-        request.onload = function() {
+        request.onload = function () {
           config = request.response;
           // first create the header selector
           createHeader();

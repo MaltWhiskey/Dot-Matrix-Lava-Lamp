@@ -35,16 +35,18 @@ void setup() {
   Serial.begin(115200);
   // Initialize animation display
   Animation::begin();
+  // Load config from file system
+  config.load();
   // Initialize web server communication
   server.begin();
   delay(500);
 
   // Create task1 on core 0
-  xTaskCreatePinnedToCore(task1, "Task1", 10000, NULL, 1, &Task1, 0);
+  xTaskCreatePinnedToCore(task1, "Task1", 20000, NULL, 1, &Task1, 0);
   delay(500);
 
   // Create task2 on core 1 (higher number is higher priority)
-  xTaskCreatePinnedToCore(task2, "Task2", 10000, NULL, 2, &Task2, 1);
+  xTaskCreatePinnedToCore(task2, "Task2", 20000, NULL, 2, &Task2, 1);
   delay(500);
 
   // Attach button callback event handlers

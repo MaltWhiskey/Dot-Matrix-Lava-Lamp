@@ -4,7 +4,6 @@
 #include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
-#include "Animation.h"
 /*----------------------------------------------------------------------------------------------
  * COMMUNICATION CLASS
  *--------------------------------------------------------------------------------------------*/
@@ -32,7 +31,8 @@ void WebServer::begin() {
 
   // Start MDNS
   if (MDNS.begin(config.network.hostname), WiFi.localIP()) {
-    Serial.println("MDNS responder started");
+    Serial.print("MDNS responder started. Hostname = ");
+    Serial.println(config.network.hostname);
   }
   // Add service to MDNS-SD
   MDNS.addService("http", "tcp", 80);
@@ -57,7 +57,11 @@ void WebServer::onIndexRequest(AsyncWebServerRequest *request) {
   Serial.println("[" + remote_ip.toString() + "] HTTP GET request of " + request->url());
   if (request->url().equals("/"))
     request->send(SPIFFS, "/index.html", "text/html");
-  else if (SPIFFS.exists(request->url()))
+  else if (request->url().equals("/gui.json")) {
+    String buffer;
+    config.serialize(buffer);
+    request->send(200, "application/json", buffer);
+  } else if (SPIFFS.exists(request->url()))
     if (request->url().endsWith(".html")) {
       request->send(SPIFFS, request->url(), "text/html");
     } else if (request->url().endsWith(".css")) {
@@ -88,9 +92,7 @@ void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t *pay
     } break;
     // Text received from a connected client
     case WStype_TEXT: {
-      // Serial.printf("Received text from client %u %s\n", client_num, payload);
-      executeCommand(payload);
-      // webSocket.sendTXT(client_num, "hallo");
+      config.execute(payload);
     } break;
     case WStype_BIN:
     case WStype_FRAGMENT_TEXT_START:
@@ -102,130 +104,4 @@ void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t *pay
     case WStype_PONG:
       break;
   }
-}
-
-bool parse(const char *command, String &msg) {
-  if (msg.startsWith(command)) {
-    msg.remove(0, strlen(command));
-    return true;
-  }
-  return false;
-}
-
-void WebServer::executeCommand(uint8_t *payload) {
-  String msg = String((char *)payload);
-  if (parse("save:", msg)) {
-    // TODO
-    return;
-  }
-
-  if (parse("activate:", msg)) {
-    if (parse("animations.fire", msg)) {
-      Animation::set(0);
-      return;
-    }
-    if (parse("animations.noise", msg)) {
-      Animation::set(1);
-      return;
-    }
-    if (parse("animations.twinkels", msg)) {
-      Animation::set(2);
-      return;
-    }
-  }
-
-  if (parse("update:", msg)) {
-    /*---------------------------------------------
-     * update: DISPLAY SETTINGS
-     * -------------------------------------------*/
-    if (parse("settings.display.max_milliamps=", msg)) {
-      config.display.max_milliamps = msg.toInt();
-      return;
-    }
-    if (parse("settings.display.gamma_correct=", msg)) {
-      config.display.gamma_correct = msg.equals("true");
-      return;
-    }
-    /*---------------------------------------------
-     * update: NETWORK SETTINGS
-     * -------------------------------------------*/
-    if (parse("settings.network.ssid=", msg)) {
-      // config.network.ssid
-      return;
-    }
-    if (parse("settings.network.password=", msg)) {
-      // config.network.password
-      return;
-    }
-    if (parse("settings.network.hostname=", msg)) {
-      // config.network.hostname
-      return;
-    }
-    /*---------------------------------------------
-     * update: FIRE SETTINGS
-     * -------------------------------------------*/
-    if (parse("animations.fire.brightness=", msg)) {
-      config.fire.brightness = msg.toInt();
-      return;
-    }
-    if (parse("animations.fire.red_energy=", msg)) {
-      config.fire.brightness = msg.toInt();
-      return;
-    }
-    /*---------------------------------------------
-     * update: NOISE SETTINGS
-     * -------------------------------------------*/
-    if (parse("animations.noise.timer=", msg)) {
-      config.noise.timer = msg.toInt();
-      return;
-    }
-    if (parse("animations.noise.brightness=", msg)) {
-      config.noise.brightness = msg.toInt();
-      return;
-    }
-    if (parse("animations.noise.dynamic_noise=", msg)) {
-      config.noise.dynamic_noise = msg.equals("true");
-      return;
-    }
-    if (parse("animations.noise.scale_p=", msg)) {
-      config.noise.scale_p = msg.toFloat();
-      return;
-    }
-    if (parse("animations.noise.speed_x=", msg)) {
-      config.noise.speed_x = msg.toFloat();
-      return;
-    }
-    if (parse("animations.noise.speed_y=", msg)) {
-      config.noise.speed_y = msg.toFloat();
-      return;
-    }
-    if (parse("animations.noise.speed_z=", msg)) {
-      config.noise.speed_z = msg.toFloat();
-      return;
-    }
-    /*---------------------------------------------
-     * update: TWINKELS SETTINGS
-     * -------------------------------------------*/
-    if (parse("animations.twinkels.timer=", msg)) {
-      config.twinkels.timer = msg.toInt();
-      return;
-    }
-    if (parse("animations.twinkels.brightness=", msg)) {
-      config.twinkels.brightness = msg.toInt();
-      return;
-    }
-    if (parse("animations.twinkels.pixel_density=", msg)) {
-      config.twinkels.pixel_density = msg.toInt();
-      return;
-    }
-    if (parse("animations.twinkels.fade_in_speed=", msg)) {
-      config.twinkels.fade_in_speed = msg.toInt();
-      return;
-    }
-    if (parse("animations.twinkels.fade_out_speed=", msg)) {
-      config.twinkels.fade_out_speed = msg.toInt();
-      return;
-    }
-  }
-  Serial.println("Unknow command: " + msg);
 }
