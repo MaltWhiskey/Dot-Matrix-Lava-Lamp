@@ -1,8 +1,8 @@
 #ifndef ANIMATION_H
 #define ANIMATION_H
 #include <stdint.h>
-#include "Display.h"
 #include "Timer.h"
+#include "Display.h"
 /*---------------------------------------------------------------------------------------
  * ANIMATION INTERFACE
  *-------------------------------------------------------------------------------------*/
