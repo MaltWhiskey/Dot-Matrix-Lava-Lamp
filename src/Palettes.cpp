@@ -339,9 +339,6 @@ const CRGBPalette16 noisePaletteList[] = {Blue_Orange_gp,
                                           BlacK_Red_Magenta_Yellow_gp,
                                           Blue_Cyan_Yellow_gp};
 
-const CRGBPalette16 unusedPaletteList[] = {retro2_16_gp, es_vintage_01_gp, gr64_hult_gp,
-                                           ib_jul01_gp, es_emerald_dragon_08_gp};
-
 const CRGBPalette16 twinkelPaletteList[] = {
     Snow_Colors_gp, IncandescentColors_gp, OceanColors_p, CloudColors_p,
     ForestColors_p, HeatColors_p,          Rainbow_gp,    PartyColors_p};

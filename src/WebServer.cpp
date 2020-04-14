@@ -1,26 +1,37 @@
 #include "main.h"
 #include "WebServer.h"
 #include <Arduino.h>
-#include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
-/*----------------------------------------------------------------------------------------------
- * COMMUNICATION CLASS
- *--------------------------------------------------------------------------------------------*/
-AsyncWebServer WebServer::server = AsyncWebServer(80);
-WebSocketsServer WebServer::webSocket = WebSocketsServer(1337);
-DNSServer WebServer::dnsServer;
-IPAddress WebServer::APIP = IPAddress(192, 168, 1, 1);
-boolean WebServer::AP_MODE = true;
+#include <ESPmDNS.h>
+#include <DNSServer.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSocketsServer.h>
 
-void WebServer::begin() {
+#define WEBSERVER_PORT 80
+#define WEBSOCKET_PORT 1337
+#define ACCESSPOINT_IP 192, 168, 1, 1
+#define ACCESSPOINT_SSID "MATRIX"
+#define ACCESSPOINT_PASS "dot-matrix"
+#define DNSSERVER_PORT 53
+
+namespace WebServer {
+
+AsyncWebServer server = AsyncWebServer(WEBSERVER_PORT);
+WebSocketsServer webSocket = WebSocketsServer(WEBSOCKET_PORT);
+IPAddress APIP = IPAddress(ACCESSPOINT_IP);
+DNSServer dnsServer;
+boolean AP_MODE;
+
+void begin() {
   // Start file system
   if (!SPIFFS.begin()) {
     Serial.println("Error mounting SPIFFS");
   }
-  // Start wifi
-  Serial.print("Starting Wifi");
+  // Start WiFi
+  Serial.print("Starting WiFi");
   WiFi.begin(config.network.ssid, config.network.password);
+  AP_MODE = true;
   for (uint8_t i = 0; i < 70; i++) {
     if (WiFi.status() == WL_CONNECTED) {
       AP_MODE = false;
@@ -31,17 +42,21 @@ void WebServer::begin() {
   }
   Serial.println();
 
+  // Start as Accesspoint
   if (AP_MODE) {
     Serial.println("Starting Wifi Access Point");
     WiFi.mode(WIFI_AP);
     // Quick hack to wait for SYSTEM_EVENT_AP_START
     delay(100);
     WiFi.softAPConfig(APIP, APIP, IPAddress(255, 255, 255, 0));
-    WiFi.softAP("MATRIX", "dot-matrix");
+    WiFi.softAP(ACCESSPOINT_SSID, ACCESSPOINT_PASS);
     Serial.print("AP IP address: ");
     Serial.println(WiFi.softAPIP());
-    dnsServer.start(53, "*", APIP);
-  } else {
+    dnsServer.start(DNSSERVER_PORT, "*", APIP);
+  }
+
+  // Start connected to local network
+  if (!AP_MODE) {
     Serial.print("Connected to ");
     Serial.println(config.network.ssid);
     Serial.print("IP address: ");
@@ -54,6 +69,7 @@ void WebServer::begin() {
     // Add service to MDNS-SD
     MDNS.addService("http", "tcp", 80);
   }
+
   // On HTTP request for root, provide index.html file
   server.on("*", HTTP_GET, onIndexRequest);
   // Start web server
@@ -64,14 +80,17 @@ void WebServer::begin() {
   webSocket.begin();
 }
 
-void WebServer::update() {
+// Handle network traffic
+void update() {
   // Handle WebSocket data
   webSocket.loop();
   // Handle dns requests in Access Point Mode only
-  if (AP_MODE) dnsServer.processNextRequest();
+  if (AP_MODE) {
+    dnsServer.processNextRequest();
+  }
 }
 
-void WebServer::onIndexRequest(AsyncWebServerRequest* request) {
+void onIndexRequest(AsyncWebServerRequest* request) {
   IPAddress remote_ip = request->client()->remoteIP();
   Serial.println("[" + remote_ip.toString() + "] HTTP GET request of " + request->url());
   if (request->url().equals("/"))
@@ -100,8 +119,8 @@ void WebServer::onIndexRequest(AsyncWebServerRequest* request) {
   }
 }
 
-void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
-                                 size_t length) {
+void onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t* payload,
+                      size_t length) {
   switch (type) {
     // Client has disconnected
     case WStype_DISCONNECTED: {
@@ -126,3 +145,5 @@ void WebServer::onWebSocketEvent(uint8_t client_num, WStype_t type, uint8_t* pay
       break;
   }
 }
+
+}  // namespace WebServer

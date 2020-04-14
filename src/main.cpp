@@ -11,8 +11,6 @@
  *-------------------------------------------------------------------------------------*/
 // Global configuration parameters
 Config config;
-// Web server used for gui and saving config
-WebServer server;
 // TaskHandles for running tasks on different cores
 TaskHandle_t Task1;
 TaskHandle_t Task2;
@@ -38,8 +36,7 @@ void setup() {
   // Load config from file system
   config.load();
   // Initialize web server communication
-  server.begin();
-  delay(500);
+  WebServer::begin();
 
   // Create task1 on core 0
   xTaskCreatePinnedToCore(task1, "Task1", 10000, NULL, 10, &Task1, 0);
@@ -65,7 +62,7 @@ void task1(void *parameter) {
   Serial.printf("Task1: Wifi running on core %d\n", xPortGetCoreID());
   while (true) {
     // Check for Web server events
-    server.update();
+    WebServer::update();
     // Prevents watchdog timeout
     vTaskDelay(1);
   }
