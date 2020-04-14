@@ -16,7 +16,7 @@ class Animation {
   static Timer timer;
   // Total animation pointers in animation list
   static uint8_t m_iAnimations;
-  // Pointers to animations in a animation list
+  // Pointers to animations in an animation list
   static Animation* m_pAnimations[20];
   // Current animation in the animation list
   static uint8_t m_iCurrentAnimation;

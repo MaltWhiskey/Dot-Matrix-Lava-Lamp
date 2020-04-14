@@ -14,17 +14,9 @@ void Noise::init() {
 bool Noise::draw(float dt) {
   // always set brightness for each animation in draw
   FastLED.setBrightness(config.noise.brightness);
-  // set all other config dependent parameters
-  dynamic_noise = config.noise.dynamic_noise;
-  scale_p = config.noise.scale_p;
-  speed_x = config.noise.speed_x;
-  speed_y = config.noise.speed_y;
-  speed_z = config.noise.speed_z;
-
+  updateNoise(dt);
   makeNoise();
   drawNoise();
-  updateNoise(dt);
-
   // returning true lets the animation::animate() call init() again
   return (timer.update());
 }
@@ -59,18 +51,27 @@ void Noise::drawNoise() {
 }
 
 void Noise::updateNoise(float dt) {
-  if (dynamic_noise) {
-    speed_offset += dt * speed_offset_speed;
+  if (config.noise.dynamic_noise) {
+    speed_offset += dt * config.noise.speed_offset_speed;
     // use same speed offset, but offset each in the noise map
     speed_x = 2 * (ng.noise1(speed_offset + 000) - 0.5);    //  -1 to 1
     speed_y = 2 * (ng.noise1(speed_offset + 064) - 0.5);    //  -1 to 1
     speed_z = 2 * (ng.noise1(speed_offset + 128) - 0.5);    //  -1 to 1
     scale_p = .15 + (ng.noise1(speed_offset + 196) / 6.6);  // .15 to .30
+  } else {
+    scale_p = config.noise.scale_p;
+    speed_x = config.noise.speed_x;
+    speed_y = config.noise.speed_y;
+    speed_z = config.noise.speed_z;
   }
-  hue += speed_hue * dt;
-  noise_x += speed_x * dt;
-  noise_y += speed_y * dt;
-  noise_z += speed_z * dt;
+  if (config.noise.speed_hue > 0)
+    hue += config.noise.speed_hue * dt;
+  else
+    hue = 0;
+
+  noise_x += config.noise.speed_x * dt;
+  noise_y += config.noise.speed_y * dt;
+  noise_z += config.noise.speed_z * dt;
 
   // dt dependent blend towards target palette
   nblendPaletteTowardPalette(currentPalette, targetPalette, 512 * dt);

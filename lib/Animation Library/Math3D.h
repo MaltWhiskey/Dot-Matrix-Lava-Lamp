@@ -15,9 +15,10 @@
  * The length = sqrt(x*x + y*y + z*z)
  *----------------------------------------------------------------------------------------------*/
 class Vector3 {
-public:
-  float x,y,z;
-public:
+ public:
+  float x, y, z;
+
+ public:
   // constructors
   Vector3();
   Vector3(const float x, const float y, const float z);
@@ -55,7 +56,7 @@ public:
 
   // rotate v by angle and this axis vector
   Vector3 rotate(float angle, const Vector3& v) const;
- 
+
   // test circle boundary of this vector
   bool inside(const Vector3& v, float radius) const;
   // test square boundary of this vector
@@ -65,16 +66,17 @@ public:
 /*----------------------------------------------------------------------------------------------
  * Quaternion CLASS
  *----------------------------------------------------------------------------------------------
- * A Quaternion is a complex number in the form  w + xi + yj + zk, where w, x, y, z are real
- * numbers and i, j, k are imaginary.
+ * A Quaternion is a complex number in the form  w + xi + yj + zk, where w, x, y, z are
+ *real numbers and i, j, k are imaginary.
  *
  * In the implementation i,j and k are ignored, w is a scalar and x,y,z is a vector
  *----------------------------------------------------------------------------------------------*/
 class Quaternion {
-public:
+ public:
   float w;
   Vector3 v;
-public:
+
+ public:
   // constructors
   Quaternion();
   Quaternion(const Quaternion& q);
@@ -117,28 +119,5 @@ public:
   float norm() const;
   // rotate v by quaternion
   Vector3 rotate(const Vector3& v) const;
-};
-
-/*-----------------------------------------------------------------------------------------------
- * OBJECT CLASS
- *-----------------------------------------------------------------------------------------------
- * The object class represents an object with a position and velocity
- * acting upon it. Forces get applied over time.
- *
- * Delta Time (float dt) is in seconds.
-*----------------------------------------------------------------------------------------------*/
-class Object2 {
-public:
-  Vector3 position = Vector3(0,0,0);
-  Vector3 velocity = Vector3(0,0,0);
-  
-  uint8_t hue;
-  float brightness; // (0.f - 1.0f) -> 0x00 - 0xff
-  float seconds;    // seconds to fade brightness to zero
-public:
-  Object2(Vector3 p = Vector3(0,0,0), Vector3 v = Vector3(0,0,0), uint8_t h = 0,
-    float b = 1.0f, float s = 1.0f) :
-    position(p), velocity(v), hue(h), brightness(b), seconds(s) {}
-  Object2& move(const float dt, const Vector3 gravity);
 };
 #endif

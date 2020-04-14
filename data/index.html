@@ -10,22 +10,23 @@
     <div id="gui"></div>
     <div id="footer"></div>
     <script>
-      // Global objects
+      // Global config holds gui.json configuration object
       var config = null;
+      // Global websocket holds connection to the server
       var websocket = null;
 
-      // Creates a label with content and optionally an id
+      // Creates a label with or without an id and some content
       function createLabel(text, key) {
         return `<label ${key ? "id=" + key : ""}>${text}</label>`;
       }
-      // Creates a slider with an id
-      function createSlider(val, key) {
+      // Creates a slider with an id, some values and update method
+      function createSlider(val, key, lbl) {
         return `<input type="range" min=${val.min} max=${val.max}
                    value=${val.value} class="slider" step=${val.step}
-                   id=${key} oninput="update('${key}', value, 'l${key}')"/>`;
+                   id=${key} oninput="update('${key}', value, '${lbl}')"/>`;
       }
 
-      // Creates a switch with an id
+      // Creates a switch with an id, checked status and update method
       function createSwitch(val, key) {
         return `<label class="switch">
                    <input id=${key} type="checkbox"
@@ -34,7 +35,7 @@
                    <span class="switch-slider"></span></label><br>`;
       }
 
-      // Creates an input with an id
+      // Creates an input with an id, value and update method
       function createInput(val, key) {
         return `<input type="text" id=${key}
                    oninput="update('${key}', value)"
@@ -50,10 +51,9 @@
           // create a label for the value with id = l+id
           gui += createLabel(val.value, "l" + key) + "<br>";
           // create the slider
-          gui += createSlider(val, key);
+          gui += createSlider(val, key, "l" + key);
         } else if (val.type == "checkbox") {
-          gui += createLabel(val.name) + " " + "<br>";
-          //gui += createLabel(val.value, "l" + key) + "<br>";
+          gui += createLabel(val.name) + "<br>";
           gui += createSwitch(val, key);
         } else if (val.type == "text") {
           gui += createLabel(val.name);
@@ -73,7 +73,6 @@
           gui += `<optgroup label="${vals[i].name}">`;
           let subkeys = Object.keys(vals[i]);
           let subvals = Object.values(vals[i]);
-          // skip name entry
           for (let j = 0; j < subkeys.length; j++) {
             if (typeof subvals[j] == "object") {
               let id = keys[i] + "." + subkeys[j];
@@ -84,6 +83,7 @@
         gui += `</select>`;
         document.getElementById("header").innerHTML = gui;
       }
+
       // get the selector as name
       function getSelectorItemName() {
         return document.getElementById("selector").value;
@@ -124,7 +124,7 @@
         // send command to webserver if animation is chosen
         let item = getSelectorItemObject();
         if (item.index >= 0) {
-          executeCommand({ event: "activate", target: item.index });
+          executeCommand(`{"event":"activate","target":${item.index}}`);
         }
       }
 
@@ -144,14 +144,14 @@
           value = '"' + value + '"';
         }
         let keys = key.split(".");
-        let cmd = `{"event":"update","${keys[0]}":{"${keys[1]}":
-                   {"${id}":{"value":${value}}}}}`;
-        executeCommand(JSON.parse(cmd));
+        executeCommand(
+          `{"event":"update","${keys[0]}":{"${keys[1]}":{"${id}":{"value":${value}}}}}`
+        );
       }
 
       // Save the settings on the webserver
       function saveConfig() {
-        executeCommand({ event: "save" });
+        executeCommand(`{"event":"save"}`);
       }
 
       // Call this to connect to the WebSocket server
@@ -177,18 +177,14 @@
       }
 
       // WebSocket communications
-      function executeCommand(commandObj) {
-        let cmd = JSON.stringify(commandObj);
+      function executeCommand(command) {
         if (websocket.readyState == WebSocket.OPEN) {
-          websocket.send(cmd);
+          websocket.send(command);
         }
-        console.log(cmd);
+        console.log(command);
       }
 
-      // Request the gui json file from the webserver and
-      // set the global config than generate the gui
-      // Generating the complete gui with code prevents
-      // controls misbehaving because all is there or nothing
+      // Generating the complete gui from code
       function loadGui() {
         let request = new XMLHttpRequest();
         request.onload = function () {
