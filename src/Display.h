@@ -1,9 +1,12 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
-#define FASTLED_ESP32_I2S
-#define FASTLED_INTERNAL
-#include <stdint.h>
+//#define FASTLED_ESP32_I2S
+//#define FASTLED_INTERNAL
+#define FASTLED_RMT_MAX_CHANNELS 1
+//#define FASTLED_RMT_BUILTIN_DRIVER
+#define FASTLED_ESP32_FLASH_LOCK 1
 #include <FastLED.h>
+#include <stdint.h>
 /*---------------------------------------------------------------------------------------
  * Matrix 16 x 16
  *
