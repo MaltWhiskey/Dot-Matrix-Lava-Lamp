@@ -165,6 +165,8 @@ struct Config {
            10000, 100);
     checkbox(settings_display, "gamma_correct", "Gamma Correction",
              display.gamma_correct);
+    slider(settings_display, "active_animation", "Active Animation", Animation::get(), 0,
+           2);
     /* ------------------------------ NETWORK --------------------------------*/
     JsonObject settings_network = settings.createNestedObject("network");
     settings_network["name"] = "Network Settings";
@@ -246,6 +248,8 @@ struct Config {
         doc["settings"]["display"]["max_milliamps"]["value"] | display.max_milliamps;
     display.gamma_correct =
         doc["settings"]["display"]["gamma_correct"]["value"] | display.gamma_correct;
+    Animation::set(doc["settings"]["display"]["active_animation"]["value"] |
+                   Animation::get());
     /* ------------------------------ NETWORK --------------------------------*/
     strlcpy(network.ssid, doc["settings"]["network"]["ssid"]["value"] | network.ssid,
             sizeof(network.ssid));

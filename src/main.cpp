@@ -5,6 +5,7 @@
 #include "WebServer.h"
 #include "OneButton.h"
 #include "Display.h"
+#include "TemperatureSensor.h"
 #include <Arduino.h>
 /*---------------------------------------------------------------------------------------
  * Globals
@@ -19,6 +20,17 @@ void task1(void *);
 void task2(void *);
 // The front touch button on the Lava Lamp
 OneButton button(SWITCH_PIN, false);
+/* The NTC temperature sensor NTC=34, GND=14, VCC=33, ADC=35, DAC=25;
+   VCC=3.3V, R NTC=680 ohm @ 0 C, R NTC=31K ohm @ 100 C
+
+   VCC ----- [R NTC 680-31K ohm] -----[R 9870 ohm]----- GND
+                                   |
+                                  NTC
+                                  PIN
+
+   Connect GPIO 25 to GPIO 35 to allow calibrating the ADC by using the internal DAC
+*/
+TemperatureSensor ts(34, 14, 33, 35, DAC_CHANNEL_1);
 /*---------------------------------------------------------------------------------------
  * Global animations. The animation constructor adds these to a list
  *-------------------------------------------------------------------------------------*/
@@ -35,6 +47,8 @@ void setup() {
   Animation::begin();
   // Load config from file system
   config.load();
+  // Calibrate temperature sensor
+  ts.calibrate();
   // Initialize web server communication
   WebServer::begin();
 
@@ -80,5 +94,9 @@ void task2(void *parameter) {
     Animation::animate();
     // Check for button 'events' and call them
     button.tick();
+    // Check temperature sensor
+    float C = ts.celcius();
+    // Need to send this to active clients and display in chart
+    Serial.printf("Temp = %.2f\n", C);
   }
 }

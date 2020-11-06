@@ -42,6 +42,8 @@ void Animation::set(uint8_t requested) {
   }
 }
 
+uint8_t Animation::get() { return m_iCurrentAnimation; }
+
 void Animation::singleClick() {
   // Using the temp variable makes this sort of thread safe...
   uint8_t current = m_iCurrentAnimation;

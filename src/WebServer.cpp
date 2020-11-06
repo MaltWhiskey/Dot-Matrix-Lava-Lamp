@@ -84,9 +84,12 @@ void begin() {
 void update() {
   // Handle WebSocket data
   webSocket.loop();
-  // Handle dns requests in Access Point Mode only
   if (AP_MODE) {
+    // Handle dns requests in Access Point Mode only
     dnsServer.processNextRequest();
+  } else if (WiFi.status() != WL_CONNECTED) {
+    // Handle reconnects only when connected to Lan
+    begin();
   }
 }
 

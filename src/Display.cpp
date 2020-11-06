@@ -13,7 +13,7 @@ void Display::begin() {
   // Setup analog and digital inputs
   pinMode(SWITCH_PIN, INPUT);
   // Setup led controller and output pin
-  FastLED.addLeds<WS2811, LEDPIN, GRB>(leds_, width * height);
+  FastLED.addLeds<WS2811, LED_PIN, GRB>(leds_, width * height);
   FastLED.setDither(false);
 }
 

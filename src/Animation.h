@@ -47,5 +47,6 @@ class Animation {
   static void next();
   static void previous();
   static void set(uint8_t index);
+  static uint8_t get();
 };
 #endif
