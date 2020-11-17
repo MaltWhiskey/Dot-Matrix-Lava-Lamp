@@ -19,6 +19,10 @@ class TemperatureSensor {
   uint8_t adc_pin;
   dac_channel_t dac_chn;
 
+ private:
+  uint16_t running_cnt = 0;
+  uint32_t running_avg = 0;
+
  public:
   TemperatureSensor(uint8_t NTC_PIN, uint8_t GND_PIN, uint8_t VCC_PIN, uint8_t ADC_PIN,
                     dac_channel_t DAC_PIN);

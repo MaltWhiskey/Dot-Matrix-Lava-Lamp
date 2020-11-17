@@ -60,16 +60,18 @@ void TemperatureSensor::calibrate() {
 float TemperatureSensor::value() {
   // Turn on current to NTC
   digitalWrite(vcc_pin, HIGH);
-
-  uint32_t value = 0;
-  // Oversample 12 bits to 28 bits
-  for (uint16_t i = 0; i <= 0xff; i++) {
-    value += analog2voltage[analogRead(ntc_pin)];
-  }
+  // Comvert read 12 bits to 20 bits
+  running_avg += analog2voltage[analogRead(ntc_pin)];
+  running_cnt++;
   // Turn off current to NTC
   digitalWrite(vcc_pin, LOW);
-  // Convert back to 12 bits (value>>16)
-  return float(value) / (2 ^ 16);
+  // After 100 measurements correct
+  if (running_cnt == 100) {
+    running_cnt >>= 2;
+    running_avg >>= 2;
+  }
+  // Convert 20 bits back to 12 bits
+  return float(running_avg) / (255 * running_cnt);
 }
 
 float TemperatureSensor::celcius() {
