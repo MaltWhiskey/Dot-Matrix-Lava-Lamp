@@ -27,20 +27,22 @@ struct Config {
   struct {
     uint16_t max_milliamps = 8000;
     bool gamma_correct = false;
+    float chart_timer = 0.1f;
+    uint16_t chart_size = 500;    
   } display;
   struct {
     char ssid[32] = "-^..^-";
-    char password[64] = "";
-    char hostname[64] = "";
+    char password[64] = "qazwsxedc";
+    char hostname[64] = "links";
   } network;
   struct {
     uint8_t brightness = 255;
     // Energy colors
-    uint8_t red_energy = 180;
-    uint8_t green_energy = 30;
+    uint8_t red_energy = 118;
+    uint8_t green_energy = 62;
     uint8_t blue_energy = 0;
     // Bias colors
-    uint8_t red_bias = 10;
+    uint8_t red_bias = 51;
     uint8_t green_bias = 0;
     uint8_t blue_bias = 0;
     // Background colors
@@ -48,23 +50,23 @@ struct Config {
     uint8_t green_bg = 0;
     uint8_t blue_bg = 0;
     // Flame size
-    uint8_t flame_min = 100;
-    uint8_t flame_max = 200;
+    uint8_t flame_min = 142;
+    uint8_t flame_max = 203;
     // Spark size
     uint8_t spark_min = 200;
     uint8_t spark_max = 255;
     // random sparks at second row
     uint8_t random_spark_probability = 2;
     // how much energy is transferred up for a spark per cycle
-    uint8_t spark_tfr = 40;
+    uint8_t spark_tfr = 36;
     // spark cells: how much energy is retained from previous cycle
-    uint16_t spark_cap = 200;
+    uint16_t spark_cap = 176;
     // up radiation
-    uint16_t up_rad = 35;
+    uint16_t up_rad = 19;
     // sidewards radiation
-    uint16_t side_rad = 35;
+    uint16_t side_rad = 54;
     // passive cells: how much energy is retained from previous cycle
-    uint16_t heat_cap = 20;
+    uint16_t heat_cap = 69;
   } fire;
   struct {
     float timer = 10.0f;
@@ -167,6 +169,10 @@ struct Config {
              display.gamma_correct);
     slider(settings_display, "active_animation", "Active Animation", Animation::get(), 0,
            2);
+    slider(settings_display, "chart_timer", "Grafiek Update Interval",
+           display.chart_timer, 0.01f, 2.0f, 0.01f);
+    slider(settings_display, "chart_size", "Grafiek grote", display.chart_size, 0,
+      1000, 1);
     /* ------------------------------ NETWORK --------------------------------*/
     JsonObject settings_network = settings.createNestedObject("network");
     settings_network["name"] = "Network Settings";
@@ -250,6 +256,10 @@ struct Config {
         doc["settings"]["display"]["gamma_correct"]["value"] | display.gamma_correct;
     Animation::set(doc["settings"]["display"]["active_animation"]["value"] |
                    Animation::get());
+    display.chart_timer =
+        doc["settings"]["display"]["chart_timer"]["value"] | display.chart_timer;
+    display.chart_size =
+        doc["settings"]["display"]["chart_size"]["value"] | display.chart_size;
     /* ------------------------------ NETWORK --------------------------------*/
     strlcpy(network.ssid, doc["settings"]["network"]["ssid"]["value"] | network.ssid,
             sizeof(network.ssid));

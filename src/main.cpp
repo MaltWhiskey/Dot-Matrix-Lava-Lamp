@@ -76,8 +76,10 @@ void loop() { delay(1000); }
 void task1(void *parameter) {
   Serial.printf("Task1: Wifi running on core %d\n", xPortGetCoreID());
   while (true) {
+    // Check temperature sensor
+    float C = ts.celcius();
     // Check for Web server events
-    WebServer::update();
+    WebServer::update(C);
     // Prevents watchdog timeout
     vTaskDelay(1);
   }
@@ -95,9 +97,5 @@ void task2(void *parameter) {
     Animation::animate();
     // Check for button 'events' and call them
     button.tick();
-    // Check temperature sensor
-    float C = ts.celcius();
-    // Need to send this to active clients and display in chart
-    Serial.printf("Temp = %.2f\n", C);
   }
 }

@@ -4,207 +4,246 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dot Matrix Lava Lamp</title>
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <script src="https://code.highcharts.com/highcharts.js"></script>
   </head>
   <body>
     <div id="header"></div>
     <div id="gui"></div>
     <div id="footer"></div>
-    <script>
-      // Global config holds gui.json configuration object
-      var config = null;
-      // Global websocket holds connection to the server
-      var websocket = null;
-
-      // Creates a label with or without an id and some content
-      function createLabel(text, key) {
-        return `<label ${key ? "id=" + key : ""}>${text}</label>`;
-      }
-      // Creates a slider with an id, some values and update method
-      function createSlider(val, key, lbl) {
-        return `<input type="range" min=${val.min} max=${val.max}
-                   value=${val.value} class="slider" step=${val.step}
-                   id=${key} oninput="update('${key}', value, '${lbl}')"/>`;
-      }
-
-      // Creates a switch with an id, checked status and update method
-      function createSwitch(val, key) {
-        return `<label class="switch">
-                   <input id=${key} type="checkbox"
-                   ${val.value ? "checked" : ""}
-                   oninput="update('${key}', ${key}.checked)"/>
-                   <span class="switch-slider"></span></label><br>`;
-      }
-
-      // Creates an input with an id, value and update method
-      function createInput(val, key) {
-        return `<input type="text" id=${key}
-                   oninput="update('${key}', value)"
-                   value="${val.value}"><br>`;
-      }
-
-      // Create an element of specific type
-      function createType(val, key) {
-        let gui = "";
-        if (val.type == "slider") {
-          // create a label for the name of the property
-          gui += createLabel(val.name) + " ";
-          // create a label for the value with id = l+id
-          gui += createLabel(val.value, "l" + key) + "<br>";
-          // create the slider
-          gui += createSlider(val, key, "l" + key);
-        } else if (val.type == "checkbox") {
-          gui += createLabel(val.name) + "<br>";
-          gui += createSwitch(val, key);
-        } else if (val.type == "text") {
-          gui += createLabel(val.name);
-          gui += createInput(val, key);
-        }
-        return gui;
-      }
-
-      // Create the selector at the top of the screen
-      function createHeader() {
-        let gui = "";
-        let aidx = 0;
-        let keys = Object.keys(config);
-        let vals = Object.values(config);
-        gui += `<select id="selector" onchange=selectorChanged(value)>`;
-        for (let i = 0; i < keys.length; i++) {
-          gui += `<optgroup label="${vals[i].name}">`;
-          let subkeys = Object.keys(vals[i]);
-          let subvals = Object.values(vals[i]);
-          for (let j = 0; j < subkeys.length; j++) {
-            if (typeof subvals[j] == "object") {
-              let id = keys[i] + "." + subkeys[j];
-              gui += `<option value="${id}">${subvals[j].name}</option>`;
-            }
-          }
-        }
-        gui += `</select>`;
-        document.getElementById("header").innerHTML = gui;
-      }
-
-      // get the selector as name
-      function getSelectorItemName() {
-        return document.getElementById("selector").value;
-      }
-      // get the selector as object
-      function getSelectorItemObject() {
-        let keys = getSelectorItemName().split(".");
-        return config[keys[0]][keys[1]];
-      }
-
-      // Creates the specified user interface
-      function createGui() {
-        let gui = "";
-        let item = getSelectorItemObject();
-        let keys = Object.keys(item);
-        let vals = Object.values(item);
-        for (let i = 0; i < keys.length; i++) {
-          if (typeof vals[i] == "object") {
-            gui += createType(vals[i], keys[i]);
-          }
-        }
-        document.getElementById("gui").innerHTML = gui;
-      }
-
-      // Creates the bottom user interface
-      function createFooter() {
-        let gui = `<input type="submit" value="Save" onclick="saveConfig()"/>`;
-        document.getElementById("footer").innerHTML = gui;
-      }
-
-      // Changeing the option selector creates a new gui
-      // But also new values need to be send through the
-      // WebSocket, to potentially change the animation
-      // if one is selected.
-      function selectorChanged(value) {
-        // update the userinterface form selector change
-        createGui();
-        // send command to webserver if animation is chosen
-        let item = getSelectorItemObject();
-        if (item.index >= 0) {
-          executeCommand(`{"event":"activate","target":${item.index}}`);
-        }
-      }
-
-      // Update config, label and execute update command
-      function update(id, value, lbl = "") {
-        // Update the new value in the config
-        let item = getSelectorItemObject();
-        item[id].value = value;
-        // Set the label belonging to id
-        if (lbl != "") {
-          document.getElementById(lbl).innerHTML = value;
-        }
-        // Execute the update command on the webserver
-        let key = getSelectorItemName();
-        // check the type specified in the json
-        if (item[id].type == "text") {
-          value = '"' + value + '"';
-        }
-        let keys = key.split(".");
-        executeCommand(
-          `{"event":"update","${keys[0]}":{"${keys[1]}":{"${id}":{"value":${value}}}}}`
-        );
-      }
-
-      // Save the settings on the webserver
-      function saveConfig() {
-        executeCommand(`{"event":"save"}`);
-      }
-
-      // Call this to connect to the WebSocket server
-      function wsConnect() {
-        let protocol =
-          window.location.protocol === "https:" ? "wss://" : "ws://";
-        let location = window.location.host + ":1337";
-        websocket = new WebSocket(protocol + location);
-        websocket.onopen = function (evt) {
-          console.log("Opend: " + evt);
-        };
-        websocket.onclose = function (evt) {
-          console.log("Closed: " + evt);
-          // if websocket is closed immediately make a new connection
-          wsConnect();
-        };
-        websocket.onmessage = function (evt) {
-          console.log("Received: " + evt.data);
-        };
-        websocket.onerror = function (evt) {
-          console.log("Error: " + evt);
-        };
-      }
-
-      // WebSocket communications
-      function executeCommand(command) {
-        if (websocket.readyState == WebSocket.OPEN) {
-          websocket.send(command);
-        }
-        console.log(command);
-      }
-
-      // Generating the complete gui from code
-      function loadGui() {
-        let request = new XMLHttpRequest();
-        request.onload = function () {
-          config = request.response;
-          // first create the header selector
-          createHeader();
-          // gui is dependent on selector, create gui next
-          createGui();
-          // create the footer save button last
-          createFooter();
-        };
-        request.open("GET", "gui.json");
-        request.responseType = "json";
-        request.send();
-      }
-
-      // Async load JSon config and set callback for gui creation
-      loadGui();
-      // Connect websocket while gui is still being loading
-      wsConnect();
-    </script>
+    <div id="chart-temperature" class="container"></div>
   </body>
+  <script>
+  var chartT = new Highcharts.Chart({
+    chart:{ renderTo : 'chart-temperature' },
+    title: { text: 'Lava Lamp Temperature' },
+    series: [{
+      showInLegend: false,
+      data: []
+    }],
+    plotOptions: {
+      series: {
+        dataLabels: {
+          enabled: false
+        }
+      }
+    },
+    xAxis: { type: 'datetime',
+      dateTimeLabelFormats: { second: '%H:%M:%S' },
+    },
+    yAxis: {
+      title: { text: 'Temperature (Celsius)' },
+      lineWidth: 1
+    },
+    credits: { enabled: false },
+  });
+  function addTemperature(temp, size) {
+    let x = (new Date()).getTime();
+    let y = Math.round(temp * 100) / 100;
+    while (chartT.series[0].data.length > size) {
+      chartT.series[0].removePoint(0, false);
+    }
+    chartT.series[0].addPoint([x, y], true, chartT.series[0].data.length > size, false);
+  }
+</script>
+  <script>
+    // Global config holds gui.json configuration object
+    var config = null;
+    // Global websocket holds connection to the server
+    var websocket = null;
+
+    // Creates a label with or without an id and some content
+    function createLabel(text, key) {
+      return `<label ${key ? "id=" + key : ""}>${text}</label>`;
+    }
+    // Creates a slider with an id, some values and update method
+    function createSlider(val, key, lbl) {
+      return `<input type="range" min=${val.min} max=${val.max}
+                  value=${val.value} class="slider" step=${val.step}
+                  id=${key} oninput="update('${key}', value, '${lbl}')"/>`;
+    }
+
+    // Creates a switch with an id, checked status and update method
+    function createSwitch(val, key) {
+      return `<label class="switch">
+                  <input id=${key} type="checkbox"
+                  ${val.value ? "checked" : ""}
+                  oninput="update('${key}', ${key}.checked)"/>
+                  <span class="switch-slider"></span></label><br>`;
+    }
+
+    // Creates an input with an id, value and update method
+    function createInput(val, key) {
+      return `<input type="text" id=${key}
+                  oninput="update('${key}', value)"
+                  value="${val.value}"><br>`;
+    }
+
+    // Create an element of specific type
+    function createType(val, key) {
+      let gui = "";
+      if (val.type == "slider") {
+        // create a label for the name of the property
+        gui += createLabel(val.name) + " ";
+        // create a label for the value with id = l+id
+        gui += createLabel(val.value, "l" + key) + "<br>";
+        // create the slider
+        gui += createSlider(val, key, "l" + key);
+      } else if (val.type == "checkbox") {
+        gui += createLabel(val.name) + "<br>";
+        gui += createSwitch(val, key);
+      } else if (val.type == "text") {
+        gui += createLabel(val.name);
+        gui += createInput(val, key);
+      }
+      return gui;
+    }
+
+    // Create the selector at the top of the screen
+    function createHeader() {
+      let gui = "";
+      let aidx = 0;
+      let keys = Object.keys(config);
+      let vals = Object.values(config);
+      gui += `<select id="selector" onchange=selectorChanged(value)>`;
+      for (let i = 0; i < keys.length; i++) {
+        gui += `<optgroup label="${vals[i].name}">`;
+        let subkeys = Object.keys(vals[i]);
+        let subvals = Object.values(vals[i]);
+        for (let j = 0; j < subkeys.length; j++) {
+          if (typeof subvals[j] == "object") {
+            let id = keys[i] + "." + subkeys[j];
+            gui += `<option value="${id}">${subvals[j].name}</option>`;
+          }
+        }
+      }
+      gui += `</select>`;
+      document.getElementById("header").innerHTML = gui;
+    }
+
+    // get the selector as name
+    function getSelectorItemName() {
+      return document.getElementById("selector").value;
+    }
+    // get the selector as object
+    function getSelectorItemObject() {
+      let keys = getSelectorItemName().split(".");
+      return config[keys[0]][keys[1]];
+    }
+
+    // Creates the specified user interface
+    function createGui() {
+      let gui = "";
+      let item = getSelectorItemObject();
+      let keys = Object.keys(item);
+      let vals = Object.values(item);
+      for (let i = 0; i < keys.length; i++) {
+        if (typeof vals[i] == "object") {
+          gui += createType(vals[i], keys[i]);
+        }
+      }
+      document.getElementById("gui").innerHTML = gui;
+    }
+
+    // Creates the bottom user interface
+    function createFooter() {
+      let gui = `<input type="submit" value="Save" onclick="saveConfig()"/>`;
+      document.getElementById("footer").innerHTML = gui;
+    }
+
+    // Changeing the option selector creates a new gui
+    // But also new values need to be send through the
+    // WebSocket, to potentially change the animation
+    // if one is selected.
+    function selectorChanged(value) {
+      // update the userinterface form selector change
+      createGui();
+      // send command to webserver if animation is chosen
+      let item = getSelectorItemObject();
+      if (item.index >= 0) {
+        executeCommand(`{"event":"activate","target":${item.index}}`);
+      }
+    }
+
+    // Update config, label and execute update command
+    function update(id, value, lbl = "") {
+      // Update the new value in the config
+      let item = getSelectorItemObject();
+      item[id].value = value;
+      // Set the label belonging to id
+      if (lbl != "") {
+        document.getElementById(lbl).innerHTML = value;
+      }
+      // Execute the update command on the webserver
+      let key = getSelectorItemName();
+      // check the type specified in the json
+      if (item[id].type == "text") {
+        value = '"' + value + '"';
+      }
+      let keys = key.split(".");
+      executeCommand(
+        `{"event":"update","${keys[0]}":{"${keys[1]}":{"${id}":{"value":${value}}}}}`
+      );
+    }
+
+    // Save the settings on the webserver
+    function saveConfig() {
+      executeCommand(`{"event":"save"}`);
+    }
+
+    // Call this to connect to the WebSocket server
+    function wsConnect() {
+      let protocol =
+        window.location.protocol === "https:" ? "wss://" : "ws://";
+      let location = window.location.host + ":1337";
+      websocket = new WebSocket(protocol + location);
+      websocket.onopen = function (evt) {
+        console.log("Opend: " + evt);
+      };
+      websocket.onclose = function (evt) {
+        console.log("Closed: " + evt);
+        // if websocket is closed immediately make a new connection
+        wsConnect();
+      };
+      websocket.onmessage = function (evt) {
+        console.log("Received: " + evt.data);
+        let obj = JSON.parse(evt.data);
+        if(obj.command == "AddTemperature") {
+          addTemperature(obj.temp, obj.size);
+        }
+      };
+      websocket.onerror = function (evt) {
+        console.log("Error: " + evt);
+      };
+    }
+
+    // WebSocket communications
+    function executeCommand(command) {
+      if (websocket.readyState == WebSocket.OPEN) {
+        websocket.send(command);
+      }
+      console.log(command);
+    }
+
+    // Generating the complete gui from code
+    function loadGui() {
+      let request = new XMLHttpRequest();
+      request.onload = function () {
+        config = request.response;
+        // first create the header selector
+        createHeader();
+        // gui is dependent on selector, create gui next
+        createGui();
+        // create the footer save button last
+        createFooter();
+      };
+      request.open("GET", "gui.json");
+      request.responseType = "json";
+      request.send();
+    }
+
+    // Async load JSon config and set callback for gui creation
+    loadGui();
+    // Connect websocket while gui is still being loading
+    wsConnect();
+  </script>
 </html>

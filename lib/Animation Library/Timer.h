@@ -20,7 +20,7 @@ class Timer {
   Timer();
   Timer(const float alarm);
   void operator=(const float alarm);
-  uint16_t update();
+  unsigned long update();
   float dt() const;
   float rt() const;
 
@@ -28,7 +28,7 @@ class Timer {
   // alarm time in seconds
   float m_alarmTime = 0;
   // amount of times counted to alarm
-  uint16_t m_alarmCount = 0;
+  unsigned long m_alarmCount = 0;
   // time management
   unsigned long m_startTime = 0;
   unsigned long m_lastTime = 0;

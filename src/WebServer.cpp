@@ -7,6 +7,8 @@
 #include <DNSServer.h>
 #include <ESPAsyncWebServer.h>
 #include <WebSocketsServer.h>
+#include "ArduinoJson.h"
+#include "Timer.h"
 
 #define WEBSERVER_PORT 80
 #define WEBSOCKET_PORT 1337
@@ -14,6 +16,8 @@
 #define ACCESSPOINT_SSID "MATRIX"
 #define ACCESSPOINT_PASS "dot-matrix"
 #define DNSSERVER_PORT 53
+// This json document size has plenty of space to hold commands send to the gui.
+#define COMMAND_DOC_SIZE 255
 
 namespace WebServer {
 
@@ -22,6 +26,8 @@ WebSocketsServer webSocket = WebSocketsServer(WEBSOCKET_PORT);
 IPAddress APIP = IPAddress(ACCESSPOINT_IP);
 DNSServer dnsServer;
 boolean AP_MODE;
+// Broadcast every second 
+Timer timer = 0.1f;
 
 void begin() {
   // Start file system
@@ -81,7 +87,7 @@ void begin() {
 }
 
 // Handle network traffic
-void update() {
+void update(float temp) {
   // Handle WebSocket data
   webSocket.loop();
   if (AP_MODE) {
@@ -90,6 +96,16 @@ void update() {
   } else if (WiFi.status() != WL_CONNECTED) {
     // Handle reconnects only when connected to Lan
     begin();
+  }
+  if(timer.update()) {
+    timer = config.display.chart_timer;
+    DynamicJsonDocument doc(CONFIG_DOC_SIZE);
+    doc["command"] = "AddTemperature";
+    doc["temp"] = temp;
+    doc["size"] = config.display.chart_size;
+    String buffer;
+    serializeJson(doc, buffer);
+    webSocket.broadcastTXT(buffer);
   }
 }
 

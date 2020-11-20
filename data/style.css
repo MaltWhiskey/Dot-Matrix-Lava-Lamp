@@ -17,6 +17,7 @@ body {
   overflow: hidden;
   display: block;
   background-color: black;
+  color: black;
   padding: 10px;
 }
 input[type="text"],
@@ -111,4 +112,25 @@ input:checked + .switch-slider:before {
 }
 .switch-slider:hover {
   border: 2px solid#fff;
+}
+
+#container {
+	height: 400px;
+	min-width: 300px;
+	max-width: 800px;
+	margin: 0 auto;
+}
+.highcharts-background {
+	fill: black;
+	stroke:black;
+	stroke-width: 0px;
+}
+.highcharts-data-label-box {
+	fill: white;
+	stroke: black;
+	stroke-width: 1px;
+}
+.highcharts-data-label {
+  font-weight: normal;
+  font-size: 10px;
 }
