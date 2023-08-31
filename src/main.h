@@ -1,39 +1,43 @@
 #ifndef MAIN_H
 #define MAIN_H
-#include <stdint.h>
 #include <Arduino.h>
-#include "ArduinoJson.h"
 #include <SPIFFS.h>
-#include "Animation.h"
+#include <stdint.h>
 
-// This json document size has plenty of space to hold commands send from the gui.
+#include "Animation.h"
+#include "ArduinoJson.h"
+
+// This json document size has plenty of space to hold commands send from the
+// gui.
 #define COMMAND_DOC_SIZE 255
 // This json document size may need to be modified if config gets bigger
 #define CONFIG_DOC_SIZE 8192
 /*---------------------------------------------------------------------------------------
  * Evil global Config parameters
  *
- * Animation init or draw routines need to apply config parameters to dynamically set
- * runtime parameters. Init only gets called when an animation starts or restarts
- * draw gets called every animation frame so choose wisely where to apply.
+ * Animation init or draw routines need to apply config parameters to
+ *dynamically set runtime parameters. Init only gets called when an animation
+ *starts or restarts draw gets called every animation frame so choose wisely
+ *where to apply.
  *
- * After creation of the config object, call load() to load the configuration from
- * the "config.json" file and apply the values to the config struct.
+ * After creation of the config object, call load() to load the configuration
+ *from the "config.json" file and apply the values to the config struct.
  *
- * If no "config.json" exists the config structs keeps the values supplied in the struct
- * After saveing a "config.json" is freshly created.
+ * If no "config.json" exists the config structs keeps the values supplied in
+ *the struct After saveing a "config.json" is freshly created.
  *-------------------------------------------------------------------------------------*/
 struct Config {
   struct {
     uint16_t max_milliamps = 8000;
     bool gamma_correct = false;
     float chart_timer = 0.1f;
-    uint16_t chart_size = 500;    
+    uint16_t chart_size = 500;
   } display;
   struct {
     char ssid[32] = "-^..^-";
     char password[64] = "qazwsxedc";
-    char hostname[64] = "links";
+    char hostname[64] = "rechts";
+    char mqttserver[64] = "192.168.178.24";
   } network;
   struct {
     uint8_t brightness = 255;
@@ -138,15 +142,16 @@ struct Config {
     leaf["step"] = step;
   }
 
-  void checkbox(JsonObject& node, const char* id, const char* name, boolean value) {
+  void checkbox(JsonObject& node, const char* id, const char* name,
+                boolean value) {
     JsonObject leaf = node.createNestedObject(id);
     leaf["name"] = name;
     leaf["type"] = "checkbox";
     leaf["value"] = value;
   }
 
-  void text(JsonObject& node, const char* id, const char* name, const char* value,
-            uint8_t size) {
+  void text(JsonObject& node, const char* id, const char* name,
+            const char* value, uint8_t size) {
     JsonObject leaf = node.createNestedObject(id);
     leaf["name"] = name;
     leaf["type"] = "text";
@@ -163,16 +168,16 @@ struct Config {
     /* ------------------------------ DISPLAY --------------------------------*/
     JsonObject settings_display = settings.createNestedObject("display");
     settings_display["name"] = "Display Settings";
-    slider(settings_display, "max_milliamps", "Max mAmps", display.max_milliamps, 0,
-           10000, 100);
+    slider(settings_display, "max_milliamps", "Max mAmps",
+           display.max_milliamps, 0, 10000, 100);
     checkbox(settings_display, "gamma_correct", "Gamma Correction",
              display.gamma_correct);
-    slider(settings_display, "active_animation", "Active Animation", Animation::get(), 0,
-           2);
+    slider(settings_display, "active_animation", "Active Animation",
+           Animation::get(), 0, 2);
     slider(settings_display, "chart_timer", "Grafiek Update Interval",
            display.chart_timer, 0.01f, 2.0f, 0.01f);
-    slider(settings_display, "chart_size", "Grafiek grote", display.chart_size, 0,
-      1000, 1);
+    slider(settings_display, "chart_size", "Grafiek grote", display.chart_size,
+           0, 1000, 1);
     /* ------------------------------ NETWORK --------------------------------*/
     JsonObject settings_network = settings.createNestedObject("network");
     settings_network["name"] = "Network Settings";
@@ -182,7 +187,8 @@ struct Config {
     /* -------------------------- ANIMATIONS ---------------------------------*/
     JsonObject animations = doc.createNestedObject("animations");
     animations["name"] = "Animation Settings";
-    /* ------------------------------ FIRE ------------------------------------*/
+    /* ------------------------------ FIRE
+     * ------------------------------------*/
     JsonObject animations_fire = animations.createNestedObject("fire");
     animations_fire["name"] = "Burning Fire";
     animations_fire["index"] = 0;
@@ -201,7 +207,8 @@ struct Config {
     slider(animations_fire, "random_spark_probability", "Spark Probability",
            fire.random_spark_probability, 0, 100);
     slider(animations_fire, "spark_tfr", "Spark Up Energy", fire.spark_tfr);
-    slider(animations_fire, "spark_cap", "Spark Energy Retention", fire.spark_cap);
+    slider(animations_fire, "spark_cap", "Spark Energy Retention",
+           fire.spark_cap);
     slider(animations_fire, "flame_min", "Flame Minimal", fire.flame_min);
     slider(animations_fire, "flame_max", "Flame Maximal", fire.flame_max);
     slider(animations_fire, "spark_min", "Spark Minimal", fire.spark_min);
@@ -209,32 +216,45 @@ struct Config {
 
     slider(animations_fire, "up_rad", "Upwards Radiation", fire.up_rad);
     slider(animations_fire, "side_rad", "Sidewards Radiation", fire.side_rad);
-    slider(animations_fire, "heat_cap", "Passive Energy Retention", fire.heat_cap);
-    /* ------------------------------ NOISE -----------------------------------*/
+    slider(animations_fire, "heat_cap", "Passive Energy Retention",
+           fire.heat_cap);
+    /* ------------------------------ NOISE
+     * -----------------------------------*/
     JsonObject animations_noise = animations.createNestedObject("noise");
     animations_noise["name"] = "Dynamic Noise";
     animations_noise["index"] = 1;
 
-    slider(animations_noise, "timer", "Palette Interval", noise.timer, 0, 60, 1);
+    slider(animations_noise, "timer", "Palette Interval", noise.timer, 0, 60,
+           1);
     slider(animations_noise, "brightness", "Brightness", noise.brightness);
     slider(animations_noise, "speed_hue", "Rotate Hue", noise.speed_hue);
 
-    checkbox(animations_noise, "dynamic_noise", "Dynamic Noise", noise.dynamic_noise);
+    checkbox(animations_noise, "dynamic_noise", "Dynamic Noise",
+             noise.dynamic_noise);
     slider(animations_noise, "speed_offset_speed", "Dynamic Speed",
            noise.speed_offset_speed, 0.00f, 0.10f, 0.001f);
-    slider(animations_noise, "scale_p", "Scale", noise.scale_p, 0.0f, 1.0f, 0.001f);
-    slider(animations_noise, "speed_x", "X-Speed", noise.speed_x, -3.0f, 3.0f, 0.01f);
-    slider(animations_noise, "speed_y", "Y-Speed", noise.speed_y, -3.0f, 3.0f, 0.01f);
-    slider(animations_noise, "speed_z", "Z-Speed", noise.speed_z, -3.0f, 3.0f, 0.01f);
-    /* ------------------------------ TWINKELS --------------------------------*/
+    slider(animations_noise, "scale_p", "Scale", noise.scale_p, 0.0f, 1.0f,
+           0.001f);
+    slider(animations_noise, "speed_x", "X-Speed", noise.speed_x, -3.0f, 3.0f,
+           0.01f);
+    slider(animations_noise, "speed_y", "Y-Speed", noise.speed_y, -3.0f, 3.0f,
+           0.01f);
+    slider(animations_noise, "speed_z", "Z-Speed", noise.speed_z, -3.0f, 3.0f,
+           0.01f);
+    /* ------------------------------ TWINKELS
+     * --------------------------------*/
     JsonObject animations_twinkels = animations.createNestedObject("twinkels");
     animations_twinkels["name"] = "Twinkeling twilight";
     animations_twinkels["index"] = 2;
 
-    slider(animations_twinkels, "timer", "Palette Interval", twinkels.timer, 0, 60, 1);
-    slider(animations_twinkels, "brightness", "Brightness", twinkels.brightness);
-    slider(animations_twinkels, "pixel_density", "Density", twinkels.pixel_density);
-    slider(animations_twinkels, "fade_in_speed", "Fade in speed", twinkels.fade_in_speed);
+    slider(animations_twinkels, "timer", "Palette Interval", twinkels.timer, 0,
+           60, 1);
+    slider(animations_twinkels, "brightness", "Brightness",
+           twinkels.brightness);
+    slider(animations_twinkels, "pixel_density", "Density",
+           twinkels.pixel_density);
+    slider(animations_twinkels, "fade_in_speed", "Fade in speed",
+           twinkels.fade_in_speed);
     slider(animations_twinkels, "fade_out_speed", "Fade out speed",
            twinkels.fade_out_speed);
 
@@ -251,17 +271,20 @@ struct Config {
     }
     /* ------------------------------ DISPLAY --------------------------------*/
     display.max_milliamps =
-        doc["settings"]["display"]["max_milliamps"]["value"] | display.max_milliamps;
+        doc["settings"]["display"]["max_milliamps"]["value"] |
+        display.max_milliamps;
     display.gamma_correct =
-        doc["settings"]["display"]["gamma_correct"]["value"] | display.gamma_correct;
+        doc["settings"]["display"]["gamma_correct"]["value"] |
+        display.gamma_correct;
     Animation::set(doc["settings"]["display"]["active_animation"]["value"] |
                    Animation::get());
-    display.chart_timer =
-        doc["settings"]["display"]["chart_timer"]["value"] | display.chart_timer;
+    display.chart_timer = doc["settings"]["display"]["chart_timer"]["value"] |
+                          display.chart_timer;
     display.chart_size =
         doc["settings"]["display"]["chart_size"]["value"] | display.chart_size;
     /* ------------------------------ NETWORK --------------------------------*/
-    strlcpy(network.ssid, doc["settings"]["network"]["ssid"]["value"] | network.ssid,
+    strlcpy(network.ssid,
+            doc["settings"]["network"]["ssid"]["value"] | network.ssid,
             sizeof(network.ssid));
     strlcpy(network.hostname,
             doc["settings"]["network"]["hostname"]["value"] | network.hostname,
@@ -270,55 +293,80 @@ struct Config {
             doc["settings"]["network"]["password"]["value"] | network.password,
             sizeof(network.password));
     /* ------------------------------ FIRE -----------------------------------*/
-    fire.brightness = doc["animations"]["fire"]["brightness"]["value"] | fire.brightness;
-    fire.red_energy = doc["animations"]["fire"]["red_energy"]["value"] | fire.red_energy;
+    fire.brightness =
+        doc["animations"]["fire"]["brightness"]["value"] | fire.brightness;
+    fire.red_energy =
+        doc["animations"]["fire"]["red_energy"]["value"] | fire.red_energy;
     fire.green_energy =
         doc["animations"]["fire"]["green_energy"]["value"] | fire.green_energy;
     fire.blue_energy =
         doc["animations"]["fire"]["blue_energy"]["value"] | fire.blue_energy;
-    fire.red_bias = doc["animations"]["fire"]["red_bias"]["value"] | fire.red_bias;
-    fire.green_bias = doc["animations"]["fire"]["green_bias"]["value"] | fire.green_bias;
-    fire.blue_bias = doc["animations"]["fire"]["blue_bias"]["value"] | fire.blue_bias;
+    fire.red_bias =
+        doc["animations"]["fire"]["red_bias"]["value"] | fire.red_bias;
+    fire.green_bias =
+        doc["animations"]["fire"]["green_bias"]["value"] | fire.green_bias;
+    fire.blue_bias =
+        doc["animations"]["fire"]["blue_bias"]["value"] | fire.blue_bias;
     fire.red_bg = doc["animations"]["fire"]["red_bg"]["value"] | fire.red_bg;
-    fire.green_bg = doc["animations"]["fire"]["green_bg"]["value"] | fire.green_bg;
+    fire.green_bg =
+        doc["animations"]["fire"]["green_bg"]["value"] | fire.green_bg;
     fire.blue_bg = doc["animations"]["fire"]["blue_bg"]["value"] | fire.blue_bg;
 
     fire.random_spark_probability =
         doc["animations"]["fire"]["random_spark_probability"]["value"] |
         fire.random_spark_probability;
-    fire.spark_tfr = doc["animations"]["fire"]["spark_tfr"]["value"] | fire.spark_tfr;
-    fire.spark_cap = doc["animations"]["fire"]["spark_cap"]["value"] | fire.spark_cap;
-    fire.flame_min = doc["animations"]["fire"]["flame_min"]["value"] | fire.flame_min;
-    fire.flame_max = doc["animations"]["fire"]["flame_max"]["value"] | fire.flame_max;
-    fire.spark_min = doc["animations"]["fire"]["spark_min"]["value"] | fire.spark_min;
-    fire.spark_max = doc["animations"]["fire"]["spark_max"]["value"] | fire.spark_max;
+    fire.spark_tfr =
+        doc["animations"]["fire"]["spark_tfr"]["value"] | fire.spark_tfr;
+    fire.spark_cap =
+        doc["animations"]["fire"]["spark_cap"]["value"] | fire.spark_cap;
+    fire.flame_min =
+        doc["animations"]["fire"]["flame_min"]["value"] | fire.flame_min;
+    fire.flame_max =
+        doc["animations"]["fire"]["flame_max"]["value"] | fire.flame_max;
+    fire.spark_min =
+        doc["animations"]["fire"]["spark_min"]["value"] | fire.spark_min;
+    fire.spark_max =
+        doc["animations"]["fire"]["spark_max"]["value"] | fire.spark_max;
 
     fire.up_rad = doc["animations"]["fire"]["up_rad"]["value"] | fire.up_rad;
-    fire.side_rad = doc["animations"]["fire"]["side_rad"]["value"] | fire.side_rad;
-    fire.heat_cap = doc["animations"]["fire"]["heat_cap"]["value"] | fire.heat_cap;
+    fire.side_rad =
+        doc["animations"]["fire"]["side_rad"]["value"] | fire.side_rad;
+    fire.heat_cap =
+        doc["animations"]["fire"]["heat_cap"]["value"] | fire.heat_cap;
     /* ------------------------------ NOISE ----------------------------------*/
     noise.timer = doc["animations"]["noise"]["timer"]["value"] | noise.timer;
     noise.brightness =
         doc["animations"]["noise"]["brightness"]["value"] | noise.brightness;
-    noise.dynamic_noise =
-        doc["animations"]["noise"]["dynamic_noise"]["value"] | noise.dynamic_noise;
-    noise.scale_p = doc["animations"]["noise"]["scale_p"]["value"] | noise.scale_p;
-    noise.speed_x = doc["animations"]["noise"]["speed_x"]["value"] | noise.speed_x;
-    noise.speed_y = doc["animations"]["noise"]["speed_y"]["value"] | noise.speed_y;
-    noise.speed_z = doc["animations"]["noise"]["speed_z"]["value"] | noise.speed_z;
-    noise.speed_offset_speed = doc["animations"]["noise"]["speed_offset_speed"]["value"] |
-                               noise.speed_offset_speed;
-    noise.speed_hue = doc["animations"]["noise"]["speed_hue"]["value"] | noise.speed_hue;
-    /* ------------------------------ TWINKELS --------------------------------*/
-    twinkels.timer = doc["animations"]["twinkels"]["timer"]["value"] | twinkels.timer;
-    twinkels.brightness =
-        doc["animations"]["twinkels"]["brightness"]["value"] | twinkels.brightness;
+    noise.dynamic_noise = doc["animations"]["noise"]["dynamic_noise"]["value"] |
+                          noise.dynamic_noise;
+    noise.scale_p =
+        doc["animations"]["noise"]["scale_p"]["value"] | noise.scale_p;
+    noise.speed_x =
+        doc["animations"]["noise"]["speed_x"]["value"] | noise.speed_x;
+    noise.speed_y =
+        doc["animations"]["noise"]["speed_y"]["value"] | noise.speed_y;
+    noise.speed_z =
+        doc["animations"]["noise"]["speed_z"]["value"] | noise.speed_z;
+    noise.speed_offset_speed =
+        doc["animations"]["noise"]["speed_offset_speed"]["value"] |
+        noise.speed_offset_speed;
+    noise.speed_hue =
+        doc["animations"]["noise"]["speed_hue"]["value"] | noise.speed_hue;
+    /* ------------------------------ TWINKELS
+     * --------------------------------*/
+    twinkels.timer =
+        doc["animations"]["twinkels"]["timer"]["value"] | twinkels.timer;
+    twinkels.brightness = doc["animations"]["twinkels"]["brightness"]["value"] |
+                          twinkels.brightness;
     twinkels.fade_in_speed =
-        doc["animations"]["twinkels"]["fade_in_speed"]["value"] | twinkels.fade_in_speed;
-    twinkels.fade_out_speed = doc["animations"]["twinkels"]["fade_out_speed"]["value"] |
-                              twinkels.fade_out_speed;
+        doc["animations"]["twinkels"]["fade_in_speed"]["value"] |
+        twinkels.fade_in_speed;
+    twinkels.fade_out_speed =
+        doc["animations"]["twinkels"]["fade_out_speed"]["value"] |
+        twinkels.fade_out_speed;
     twinkels.pixel_density =
-        doc["animations"]["twinkels"]["pixel_density"]["value"] | twinkels.pixel_density;
+        doc["animations"]["twinkels"]["pixel_density"]["value"] |
+        twinkels.pixel_density;
   }
 
   // Executes json command send from the client
