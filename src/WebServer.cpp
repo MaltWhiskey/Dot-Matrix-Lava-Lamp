@@ -87,7 +87,7 @@ void begin() {
 }
 
 // Handle network traffic
-void update(float temp) {
+void update() {
   // Handle WebSocket data
   webSocket.loop();
   if (AP_MODE) {
@@ -98,7 +98,7 @@ void update(float temp) {
     begin();
   }
   if(timer.update()) {
-    timer = config.display.chart_timer;
+/*    timer = config.display.chart_timer;
     DynamicJsonDocument doc(CONFIG_DOC_SIZE);
     doc["command"] = "AddTemperature";
     doc["temp"] = temp;
@@ -106,6 +106,7 @@ void update(float temp) {
     String buffer;
     serializeJson(doc, buffer);
     webSocket.broadcastTXT(buffer);
+    */
   }
 }
 

@@ -3,7 +3,6 @@
 #include "Noise.h"
 #include "Twinkels.h"
 #include "WebServer.h"
-#include "OneButton.h"
 #include "Display.h"
 #include "TemperatureSensor.h"
 #include <Arduino.h>
@@ -19,7 +18,6 @@ TaskHandle_t Task2;
 void task1(void *);
 void task2(void *);
 // The front touch button on the Lava Lamp
-OneButton button(SWITCH_PIN, false);
 /*---------------------------------------------------------------------------------------
  * The NTC temperature sensor NTC=34, GND=14, VCC=33, ADC=35, DAC=25;
  * VCC=3.3V, R NTC=680 ohm @ 0 C, R NTC=31K ohm @ 100 C
@@ -31,7 +29,7 @@ OneButton button(SWITCH_PIN, false);
  *
  * Connect GPIO 25 to GPIO 35 to allow calibrating the ADC by using the internal DAC
  *-------------------------------------------------------------------------------------*/
-TemperatureSensor ts(34, 14, 33, 35, DAC_CHANNEL_1);
+//TemperatureSensor ts(34, 14, 33, 35, DAC_CHANNEL_1);
 /*---------------------------------------------------------------------------------------
  * Global animations. The animation constructor adds these to a list
  *-------------------------------------------------------------------------------------*/
@@ -49,7 +47,7 @@ void setup() {
   // Load config from file system
   config.load();
   // Calibrate temperature sensor
-  ts.calibrate();
+  //ts.calibrate();
   // Initialize web server communication
   WebServer::begin();
 
@@ -61,10 +59,6 @@ void setup() {
   xTaskCreatePinnedToCore(task2, "Task2", 10000, NULL, 20, &Task2, 1);
   delay(500);
 
-  // Attach button callback event handlers
-  button.attachClick(Animation::singleClick);
-  button.attachDoubleClick(Animation::doubleClick);
-  button.attachLongPressStart(Animation::next);
 }
 /*---------------------------------------------------------------------------------------
  * Loop Core 1
@@ -77,9 +71,9 @@ void task1(void *parameter) {
   Serial.printf("Task1: Wifi running on core %d\n", xPortGetCoreID());
   while (true) {
     // Check temperature sensor
-    float C = ts.celcius();
+//    float C = ts.celcius();
     // Check for Web server events
-    WebServer::update(C);
+    WebServer::update();
     // Prevents watchdog timeout
     vTaskDelay(1);
   }
@@ -96,6 +90,6 @@ void task2(void *parameter) {
     // Run animation rountines and update the display
     Animation::animate();
     // Check for button 'events' and call them
-    button.tick();
+   // button.tick();
   }
 }
